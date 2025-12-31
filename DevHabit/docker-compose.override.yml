@@ -1,0 +1,11 @@
+services:
+  devhabit.api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Run HTTP-only inside the container to avoid developer HTTPS cert issues.
+      - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_HTTP_PORTS=8080
+    ports:
+      - "8080"
+    volumes:
+      - ${APPDATA:-${HOME}}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
