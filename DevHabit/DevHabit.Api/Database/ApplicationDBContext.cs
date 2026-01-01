@@ -14,4 +14,3 @@ public sealed class ApplicationDBContext(DbContextOptions<ApplicationDBContext> 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDBContext).Assembly);
     }
 }
-

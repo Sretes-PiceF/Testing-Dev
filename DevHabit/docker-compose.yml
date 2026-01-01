@@ -27,7 +27,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     ports:
-      - 5433:5432
+      - 5432:5432
 
   devhabit.seq:
     container_name: devhabit-seq
@@ -37,8 +37,8 @@ services:
     volumes:
       - seq_data:/data
     ports:
-      - 8081:80
-      - 5342:5341
+      - 8080:80
+      - 5341:5341
 
   devhabit.aspire-dashboard:
     container_name: devhabit-aspire
