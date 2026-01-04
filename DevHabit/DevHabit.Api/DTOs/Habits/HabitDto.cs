@@ -8,7 +8,7 @@ public sealed record HabitsCollectionDto
 }
 public sealed record HabitDto
 {
-    public required int Id { get; init; }
+    public required string Id { get; init; }
     public required string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public required HabitType Type { get; init; }

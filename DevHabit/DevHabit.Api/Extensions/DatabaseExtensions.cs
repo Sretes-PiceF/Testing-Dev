@@ -19,7 +19,8 @@ public static class DatabaseExtensions
         catch (Exception e)
         {
             app.Logger.LogError(e, "An error occurred while applying database migrations.");
-            throw;
+            app.Logger.LogWarning("Continuing without applied migrations. Verify database connection settings.");
+            // Do not rethrow to allow the application/container to start even if migrations fail
         }
     }
 }
