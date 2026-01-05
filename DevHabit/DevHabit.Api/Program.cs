@@ -11,9 +11,10 @@ using OpenTelemetry.Trace;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers(options =>
-{ 
+{
     options.ReturnHttpNotAcceptable = true;
 })
+.AddNewtonsoftJson()
 .AddXmlSerializerFormatters();
 
 builder.Services.AddOpenApi();
@@ -49,7 +50,7 @@ WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); 
+    app.MapOpenApi();
     await app.ApplyMigrationAsync();
 }
 
