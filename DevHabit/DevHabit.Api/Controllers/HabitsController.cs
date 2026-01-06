@@ -29,12 +29,12 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
 
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<HabitDto>> GetHabit(string id)
+    public async Task<ActionResult<HabitWhithTagsDto>> GetHabit(string id)
     {
-        HabitDto? habit = await dbContext
+        HabitWhithTagsDto? habit = await dbContext
             .Habits
             .Where(h => h.Id == id)
-            .Select(HabitQueries.ProjectToDto())
+            .Select(HabitQueries.ProjectToHabitWithTagsDto())
             .FirstOrDefaultAsync();
 
         if (habit is null)
@@ -61,25 +61,6 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
             nameof(GetHabit),
             new { id = habitDto.Id },
             habitDto);
-    }
-
-
-
-    [HttpPut("{id}")]
-    public async Task<ActionResult> UpdateHabit(string id, UpdateHabitDto updateHabitDto)
-    {
-        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
-
-        if (habit is null)
-        {
-            return NotFound();
-        }
-
-        habit.UpdateFromDto(updateHabitDto);
-
-        await dbContext.SaveChangesAsync();
-
-        return NoContent();
     }
 
 
@@ -114,22 +95,4 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
         return NoContent();
     }
 
-
-
-    [HttpDelete("{id}")]
-    public async Task<ActionResult> DeleteHabit(string id)
-    {
-        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
-
-        if (habit is null)
-        {
-            return NotFound();
-        }
-
-        dbContext.Habits.Remove(habit);
-
-        await dbContext.SaveChangesAsync();
-
-        return NoContent();
-    }
 }
