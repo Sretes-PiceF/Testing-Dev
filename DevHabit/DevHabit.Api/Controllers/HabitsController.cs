@@ -3,7 +3,6 @@ using DevHabit.Api.Database;
 using DevHabit.Api.DTOs.Habits;
 using DevHabit.Api.Entities;
 using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +14,21 @@ namespace DevHabit.Api.Controllers;
 public sealed class HabitsController(ApplicationDBContext dbContext) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<HabitsCollectionDto>> GetHabits()
+    public async Task<ActionResult<HabitsCollectionDto>> GetHabits([FromQuery] HabitsQueryParameters query)
     {
+        query.Search ??= query.Search?.Trim().ToLower();
+
         List<HabitDto> habits = await dbContext
         .Habits
+        // Kalau menggunakan yang dibawah ini akan terjadi error warning karena di file .editorconfig ini ada aturan untuk menggunakan EF.Functions.Like
+        // .Where(h => string.IsNullOrWhiteSpace(search) ||
+        //     h.Name.ToLower().Contains(search) ||
+        //     (h.Description != null && h.Description.ToLower().Contains(search)));
+        .Where(h => query.Search == null ||
+                EF.Functions.Like(h.Name, $"%{query.Search}%") ||
+                h.Description != null && EF.Functions.Like(h.Description, $"%{query.Search}%"))
+        .Where(h => query.Type == null || h.Type == query.Type)
+        .Where(h => query.Status == null || h.Status == query.Status)
         .Select(HabitQueries.ProjectToDto())
         .ToListAsync();
 
