@@ -18,6 +18,15 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
     {
         query.Search ??= query.Search?.Trim().ToLower();
 
+        Expression<Func<Habit, object>> orderBy = query.Sort switch
+        {
+            "name" => h => h.Name,
+            "Description" => h => h.Description,
+            "type" => h => h.Type,
+            "status" => h => h.Status,
+            _ => h => h.Name
+        };
+
         List<HabitDto> habits = await dbContext
         .Habits
         // Kalau menggunakan yang dibawah ini akan terjadi error warning karena di file .editorconfig ini ada aturan untuk menggunakan EF.Functions.Like
@@ -28,6 +37,7 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
                 EF.Functions.Like(h.Name, $"%{query.Search}%") ||
                 h.Description != null && EF.Functions.Like(h.Description, $"%{query.Search}%"))
         .Where(h => query.Type == null || h.Type == query.Type)
+        .OrderBy(orderBy)
         .Where(h => query.Status == null || h.Status == query.Status)
         .Select(HabitQueries.ProjectToDto())
         .ToListAsync();
