@@ -2,6 +2,8 @@ using System.Linq.Expressions;
 using DevHabit.Api.Database;
 using DevHabit.Api.DTOs.Habits;
 using DevHabit.Api.Entities;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,8 +49,19 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
 
 
     [HttpPost]
-    public async Task<ActionResult<HabitDto>> CreateHabit(CreateHabitDto createHabitDto)
+    public async Task<ActionResult<HabitDto>> CreateHabit(
+        CreateHabitDto createHabitDto,
+        IValidator<CreateHabitDto> validator)
     {
+        // ValidationResult validationResult = await validator.ValidateAsync(createHabitDto);
+
+        // if (!validationResult.IsValid)
+        // {
+        //     return BadRequest(validationResult.ToDictionary());
+        // }
+
+        await validator.ValidateAndThrowAsync(createHabitDto);
+
         Habit habit = createHabitDto.ToEntity();
 
         dbContext.Habits.Add(habit);
@@ -57,12 +70,26 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
 
         HabitDto habitDto = habit.ToDto();
 
-        return CreatedAtAction(
-            nameof(GetHabit),
-            new { id = habitDto.Id },
-            habitDto);
+        return CreatedAtAction(nameof(GetHabit), new { id = habitDto.Id }, habitDto);
     }
 
+
+    [HttpPut]
+    public async Task<ActionResult> UpdateHabit(string id, UpdateHabitDto updateHabitDto)
+    {
+        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+
+        if (habit is null)
+        {
+            return NotFound();
+        }
+
+        habit.UpdateFromDto(updateHabitDto);
+
+        await dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
 
 
     [HttpPatch("{id}")]
@@ -89,6 +116,24 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
         habit.Name = habitDto.Name;
         habit.Description = habitDto.Description;
         habit.UpdatedAtUtc = DateTime.UtcNow;
+
+        await dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+
+    [HttpDelete("{id}")]
+    public async Task<ActionResult> DeleteHabit(string id)
+    {
+        Habit? habit = await dbContext.Habits.FirstOrDefaultAsync(h => h.Id == id);
+
+        if (habit is null)
+        {
+            return NotFound();
+        }
+
+        dbContext.Habits.Remove(habit);
 
         await dbContext.SaveChangesAsync();
 

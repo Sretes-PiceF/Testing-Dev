@@ -1,8 +1,11 @@
 using DevHabit.Api.Database;
 using DevHabit.Api.DTOs.Tags;
 using DevHabit.Api.Entities;
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Controllers;
@@ -46,9 +49,34 @@ public sealed class TagsController(ApplicationDBContext dBContext) : ControllerB
 
 
     [HttpPost]
-    public async Task<ActionResult<TagDto>> CreateTag(CreateTagDto createTagDto)
+    public async Task<ActionResult<TagDto>> CreateTag(
+    CreateTagDto createTagDto,
+    IValidator<CreateTagDto> validator,
+    ProblemDetailsFactory problemDetailsFactory)
     {
+        ValidationResult validationResult = await validator.ValidateAsync(createTagDto);
+
+        if (!validationResult.IsValid)
+        {
+            /*return BadRequest(validationResult.ToDictionary()); */
+            /*return ValidationProblem(new ValidationProblemDetails(validationResult.ToDictionary())); */
+
+            ProblemDetails problem = problemDetailsFactory.CreateProblemDetails(
+                HttpContext,
+                StatusCodes.Status400BadRequest);
+            problem.Extensions.Add("Errors", validationResult.ToDictionary());
+
+            return BadRequest(problem);
+        }
+
         Tag tag = createTagDto.ToEntity();
+
+        if (await dBContext.Tags.AnyAsync(t => t.Name == tag.Name))
+        {
+            return Problem(
+                detail: $"The tag '{tag.Name}' already exists.",
+                statusCode: StatusCodes.Status409Conflict);
+        }
 
         dBContext.Tags.Add(tag);
 
@@ -56,10 +84,7 @@ public sealed class TagsController(ApplicationDBContext dBContext) : ControllerB
 
         TagDto tagDto = tag.TagDto();
 
-        return CreatedAtAction(
-            nameof(GetTag),
-            new { id = tagDto.Id },
-            tagDto);
+        return CreatedAtAction(nameof(GetTag), new { id = tagDto.Id }, tagDto);
     }
 
 
