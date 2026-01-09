@@ -1,11 +1,13 @@
-using System.Linq.Expressions;
+using System.Linq.Dynamic.Core;
 using DevHabit.Api.Database;
 using DevHabit.Api.DTOs.Habits;
 using DevHabit.Api.Entities;
+using DevHabit.Api.Services.Sorting;
 using FluentValidation;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Trace;
 
 namespace DevHabit.Api.Controllers;
 
@@ -14,18 +16,20 @@ namespace DevHabit.Api.Controllers;
 public sealed class HabitsController(ApplicationDBContext dbContext) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<HabitsCollectionDto>> GetHabits([FromQuery] HabitsQueryParameters query)
+    public async Task<ActionResult<HabitsCollectionDto>> GetHabits(
+        [FromQuery] HabitsQueryParameters query,
+        SortMappingProvider sortMappingProvider)
     {
+        if (!sortMappingProvider.ValidateMappings<HabitDto, Habit>(query.Sort))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                detail: $"The provided sort parameter isn't valid: '{query.Sort}'");
+        }
+
         query.Search ??= query.Search?.Trim().ToLower();
 
-        Expression<Func<Habit, object>> orderBy = query.Sort switch
-        {
-            "name" => h => h.Name,
-            "Description" => h => h.Description,
-            "type" => h => h.Type,
-            "status" => h => h.Status,
-            _ => h => h.Name
-        };
+        SortMapping[] sortMappings = sortMappingProvider.GetMappings<HabitDto, Habit>();
 
         List<HabitDto> habits = await dbContext
         .Habits
@@ -37,8 +41,8 @@ public sealed class HabitsController(ApplicationDBContext dbContext) : Controlle
                 EF.Functions.Like(h.Name, $"%{query.Search}%") ||
                 h.Description != null && EF.Functions.Like(h.Description, $"%{query.Search}%"))
         .Where(h => query.Type == null || h.Type == query.Type)
-        .OrderBy(orderBy)
         .Where(h => query.Status == null || h.Status == query.Status)
+        .ApplySort(query.Sort, sortMappings)
         .Select(HabitQueries.ProjectToDto())
         .ToListAsync();
 
